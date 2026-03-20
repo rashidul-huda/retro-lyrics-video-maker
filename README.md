@@ -2,7 +2,7 @@
 
 > A browser-based tool that turns an MP3 and a timed lyrics JSON into a **high-quality retro-themed lyrics video** — complete with 8-bit rapper animations, VHS intro, word-perfect karaoke highlighting, and direct WebM export at up to 20 Mbps. No server. No installs. Just open `index.html` in Chrome.
 
-![Retro Lyrics Video Maker Screenshot]([https://i.imgur.com/placeholder.png](https://i.ibb.co/20RnhNZF/retro-lyrics-video-maker.png))
+![Retro Lyrics Video Maker Screenshot](https://i.ibb.co/20RnhNZF/retro-lyrics-video-maker.png)
 
 ---
 
