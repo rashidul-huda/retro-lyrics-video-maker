@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Lyrics Video Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:     #0d0800;
+  --card:   #160f00;
+  --border: #3a2a00;
+  --amber:  #ffaa00;
+  --gold:   #ffcc00;
+  --dim:    #7a5500;
+  --text:   #ffe8a0;
+  --green:  #aaff44;
+  --red:    #ff4422;
+  --scan:   rgba(0,0,0,0.22);
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 20px 60px;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, var(--scan) 0px, var(--scan) 1px, transparent 1px, transparent 4px);
+  pointer-events: none; z-index: 1000;
+}
+.wrap { position:relative; z-index:1; width:100%; max-width:780px; }
+
+/* Header */
+.hdr { margin-bottom: 32px; }
+.hdr h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(16px, 3vw, 28px);
+  color: var(--gold);
+  text-shadow: 3px 3px 0 #7a4400, 0 0 30px rgba(255,200,0,0.4);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.hdr p {
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Panels */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 14px;
+  position: relative;
+}
+.panel-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+/* Upload grid */
+.upload-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 4px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--amber); background: rgba(255,170,0,0.05); }
+.upload-zone.ready { border-color: var(--green); border-style: solid; }
+.upload-zone input { display:none; }
+.uz-icon { font-size:24px; margin-bottom:8px; }
+.uz-label { font-size:12px; font-weight:700; }
+.uz-sub { font-size:10px; color:var(--dim); margin-top:3px; letter-spacing:0.1em; text-transform:uppercase; }
+.uz-fname { font-size:10px; color:var(--green); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Rapper assign table */
+.rapper-table { width:100%; border-collapse:collapse; font-size:11px; }
+.rapper-table th {
+  font-family:'Press Start 2P',monospace; font-size:7px;
+  color:var(--dim); padding:6px 8px; text-align:left;
+  border-bottom:1px solid var(--border); letter-spacing:0.1em;
+}
+.rapper-table td { padding:5px 8px; border-bottom:1px solid rgba(58,42,0,0.5); vertical-align:middle; }
+.rapper-table select {
+  background:var(--bg); border:1px solid var(--border); border-radius:3px;
+  color:var(--text); font-size:11px; padding:3px 6px; outline:none; width:100%;
+}
+.rapper-table select option { background:#160f00; }
+.lnum { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--dim); }
+.lpreview { color:var(--text); max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Render btn */
+.render-btn {
+  width:100%; padding:16px;
+  background: var(--gold);
+  border:none; border-radius:4px;
+  font-family:'Press Start 2P',monospace; font-size:13px;
+  letter-spacing:0.06em; color:#0d0800;
+  cursor:pointer; transition:all 0.15s; margin-bottom:14px;
+  text-shadow:none;
+}
+.render-btn:hover:not(:disabled) { background:#ffe044; transform:translateY(-2px); box-shadow:0 6px 24px rgba(255,200,0,0.4); }
+.render-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+
+/* Progress */
+.progress-wrap { display:none; margin-bottom:14px; }
+.prog-bar { height:8px; background:var(--border); border-radius:2px; overflow:hidden; margin:8px 0; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--amber),var(--gold)); border-radius:2px; width:0%; transition:width 0.2s; }
+.prog-meta { display:flex; justify-content:space-between; font-family:'Press Start 2P',monospace; font-size:7px; color:var(--dim); }
+.prog-meta span { color:var(--gold); }
+.prog-status { font-size:10px; color:var(--dim); margin-top:4px; }
+
+/* Preview */
+.preview-wrap { display:none; margin-bottom:14px; border:2px solid var(--border); border-radius:4px; overflow:hidden; }
+.preview-wrap canvas { width:100%; display:block; }
+
+/* Download */
+.dl-btn {
+  width:100%; padding:14px; display:none; text-align:center; text-decoration:none;
+  border:2px solid var(--green); border-radius:4px;
+  font-family:'Press Start 2P',monospace; font-size:11px;
+  color:var(--green); transition:all 0.15s; margin-bottom:14px;
+}
+.dl-btn:hover { background:rgba(170,255,68,0.08); }
+
+/* Log */
+.log {
+  font-family:monospace; font-size:10px; color:var(--dim);
+  background:var(--card); border:1px solid var(--border); border-radius:4px;
+  padding:10px; max-height:90px; overflow-y:auto; display:none; line-height:1.7;
+}
+.log .ok  { color:var(--green); }
+.log .err { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <h1>RETRO LYRICS<br>VIDEO MAKER</h1>
+    <p>1080p · Retro Tape · 20 Mbps · 8-bit Rapper · VP9</p>
+  </div>
+
+  <!-- Upload -->
+  <div class="panel">
+    <div class="panel-label">① Load Files</div>
+    <div class="upload-grid">
+      <div class="upload-zone" id="zone-audio" onclick="document.getElementById('inp-audio').click()">
+        <input type="file" id="inp-audio" accept="audio/*">
+        <div class="uz-icon">🎵</div>
+        <div class="uz-label">Audio</div>
+        <div class="uz-sub">MP3 / WAV</div>
+        <div class="uz-fname" id="audio-name">click or drop</div>
+      </div>
+      <div class="upload-zone" id="zone-json" onclick="document.getElementById('inp-json').click()">
+        <input type="file" id="inp-json" accept=".json,application/json">
+        <div class="uz-icon">📝</div>
+        <div class="uz-label">Lyrics JSON</div>
+        <div class="uz-sub">Timed words</div>
+        <div class="uz-fname" id="json-name">click or drop</div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="panel-label" style="margin-bottom:6px">Song Title (shown in intro)</div>
+      <input id="inp-title" type="text" value="My Victory Is Sweet!"
+        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;
+               color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;
+               padding:8px 12px;outline:none;"
+        placeholder="Song title…">
+    </div>
+  </div>
+
+  <!-- Rapper assignment per line -->
+  <div class="panel" id="rapper-panel" style="display:none">
+    <div class="panel-label">② Assign 8-bit Rapper per Line</div>
+    <div style="overflow-x:auto">
+      <table class="rapper-table" id="rapper-table">
+        <thead><tr>
+          <th>#</th><th>Line preview</th><th>Rapper</th><th>Anim</th>
+        </tr></thead>
+        <tbody id="rapper-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <button class="render-btn" id="render-btn" disabled>▶ RENDER VIDEO</button>
+
+  <div class="progress-wrap panel" id="progress-wrap">
+    <div class="prog-meta">RENDERING <span id="pct-label">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="prog-status" id="prog-status">Initialising…</div>
+  </div>
+
+  <div class="preview-wrap" id="preview-wrap"><canvas id="preview-canvas"></canvas></div>
+  <a class="dl-btn" id="dl-btn" download="retro-lyrics.webm">⬇ DOWNLOAD WEBM</a>
+  <div class="log" id="log"></div>
+</div>
+
+<!-- ── Rapper modules — add new ones here, they auto-appear in the UI ── -->
+<script src="rappers/crown.js"></script>
+<script src="rappers/lean.js"></script>
+<script src="rappers/hunch.js"></script>
+<script src="rappers/spin.js"></script>
+<script src="rappers/throne.js"></script>
+<script src="rappers/shadow.js"></script>
+<script src="rappers/flex.js"></script>
+<script src="rappers/wave.js"></script>
+<script src="rappers/battle.js"></script>
+<script src="rappers/snake.js"></script>
+<script src="rappers/boss.js"></script>
+<script src="rappers/blueprint.js"></script>
+<script src="rappers/freight.js"></script>
+<script src="rappers/eruption.js"></script>
+<script src="rappers/chorus.js"></script>
+<script src="rappers/ghost.js"></script>
+<script src="rappers/exit.js"></script>
+<script src="rappers/outro.js"></script>
+
+<script>
+'use strict';
+// ─── State ───────────────────────────────────────────────────────────────────
+let audioFile = null, lyricsData = null, audioBuffer = null;
+
+// Per-line rapper assignment: lineAssign[i] = { rapperId, animMode }
+let lineAssign = [];
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  logEl.style.display = 'block';
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = '› ' + msg;
+  logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ─── File drop setup ─────────────────────────────────────────────────────────
+function setupZone(zone, input, nameEl, cb) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) { input.files = e.dataTransfer.files; cb(e.dataTransfer.files[0]); }
+  });
+  input.addEventListener('change', () => { if (input.files[0]) cb(input.files[0]); });
+}
+
+setupZone(document.getElementById('zone-audio'), document.getElementById('inp-audio'),
+  document.getElementById('audio-name'), f => {
+    audioFile = f;
+    document.getElementById('audio-name').textContent = f.name;
+    document.getElementById('zone-audio').classList.add('ready');
+    log('Audio: ' + f.name, 'ok'); checkReady();
+  });
+
+setupZone(document.getElementById('zone-json'), document.getElementById('inp-json'),
+  document.getElementById('json-name'), f => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        lyricsData = JSON.parse(e.target.result);
+        document.getElementById('json-name').textContent = f.name;
+        document.getElementById('zone-json').classList.add('ready');
+        log(`Lyrics: ${lyricsData.length} lines, ${lyricsData.flatMap(l=>l.words).length} words`, 'ok');
+        buildRapperTable();
+        checkReady();
+      } catch(err) { log('JSON error: ' + err.message, 'err'); }
+    };
+    r.readAsText(f);
+  });
+
+function checkReady() {
+  document.getElementById('render-btn').disabled = !(audioFile && lyricsData);
+}
+
+// ─── Rapper table ─────────────────────────────────────────────────────────────
+function getRapperList() {
+  return Object.values(window.RAPPERS || {});
+}
+
+function getAnimModes(rapperId) {
+  const r = (window.RAPPERS || {})[rapperId];
+  if (!r) return ['idle'];
+  // derive available modes from the rapper's modeForLine function
+  return ['idle','hype','spit'];
+}
+
+function buildRapperTable() {
+  if (!lyricsData) return;
+  const rappers = getRapperList();
+  if (rappers.length === 0) return;
+
+  document.getElementById('rapper-panel').style.display = 'block';
+  const tbody = document.getElementById('rapper-tbody');
+  tbody.innerHTML = '';
+  lineAssign = [];
+
+  // Intro row
+  const introAssign = { rapperId: rappers[0].id, animMode: 'idle' };
+  lineAssign[-1] = introAssign;
+  {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="lnum">INTRO</td>
+      <td class="lpreview" style="color:var(--dim)">Pre-lyrics / music intro</td>
+      <td>${buildRapperSelect(-1, rappers, introAssign)}</td>
+      <td>${buildAnimSelect(-1, rappers[0].id, 'idle')}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  lyricsData.forEach((line, i) => {
+    const preview = line.words.map(w => w.text).join(' ');
+    // Auto-assign: check each rapper's lineAssignments
+    let defaultRapper = rappers[0];
+    let defaultMode   = 'hype';
+    for (const r of rappers) {
+      if (r.lineAssignments && r.lineAssignments.includes(i)) {
+        defaultRapper = r;
+        defaultMode   = r.modeForLine ? r.modeForLine(i) : 'hype';
+        break;
+      }
+    }
+    const assign = { rapperId: defaultRapper.id, animMode: defaultMode };
+    lineAssign[i] = assign;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="lnum">${String(i).padStart(2,'0')}</td>
+      <td class="lpreview" title="${preview}">${preview}</td>
+      <td>${buildRapperSelect(i, rappers, assign)}</td>
+      <td>${buildAnimSelect(i, defaultRapper.id, defaultMode)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Wire change events
+  tbody.querySelectorAll('select.rsel').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const idx = parseInt(sel.dataset.idx);
+      lineAssign[idx].rapperId = sel.value;
+      // update anim select options
+      const animSel = tbody.querySelector(`select.asel[data-idx="${idx}"]`);
+      if (animSel) {
+        const modes = getAnimModes(sel.value);
+        animSel.innerHTML = modes.map(m => `<option value="${m}">${m}</option>`).join('');
+        lineAssign[idx].animMode = modes[0];
+      }
+    });
+  });
+  tbody.querySelectorAll('select.asel').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const idx = parseInt(sel.dataset.idx);
+      lineAssign[idx].animMode = sel.value;
+    });
+  });
+}
+
+function buildRapperSelect(idx, rappers, assign) {
+  const opts = rappers.map(r =>
+    `<option value="${r.id}" ${r.id===assign.rapperId?'selected':''}>${r.label||r.id}</option>`
+  ).join('');
+  return `<select class="rsel" data-idx="${idx}">${opts}</select>`;
+}
+
+function buildAnimSelect(idx, rapperId, currentMode) {
+  const modes = getAnimModes(rapperId);
+  const opts = modes.map(m => `<option value="${m}" ${m===currentMode?'selected':''}>${m}</option>`).join('');
+  return `<select class="asel" data-idx="${idx}">${opts}</select>`;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+document.getElementById('render-btn').addEventListener('click', startRender);
+
+async function startRender() {
+  document.getElementById('render-btn').disabled = true;
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('dl-btn').style.display = 'none';
+
+  const W = 1920, H = 1080;
+
+  setStatus('Decoding audio…');
+  const arrayBuf = await audioFile.arrayBuffer();
+  const actx     = new AudioContext();
+  audioBuffer    = await actx.decodeAudioData(arrayBuf);
+  const duration = audioBuffer.duration;
+  log(`Duration: ${duration.toFixed(2)}s`, 'ok');
+
+  const canvas = document.getElementById('preview-canvas');
+  canvas.width = W; canvas.height = H;
+  document.getElementById('preview-wrap').style.display = 'block';
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // MediaRecorder
+  const canvasStream = canvas.captureStream(60);
+  const audioCtx2   = new AudioContext();
+  const dest        = audioCtx2.createMediaStreamDestination();
+  const src         = audioCtx2.createBufferSource();
+  src.buffer        = audioBuffer;
+  src.connect(dest);
+  canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+
+  const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+               .find(c => MediaRecorder.isTypeSupported(c)) || 'video/webm';
+  log('Codec: ' + mime, 'ok');
+
+  const recorder = new MediaRecorder(canvasStream, {
+    mimeType: mime, videoBitsPerSecond: 20_000_000, audioBitsPerSecond: 320_000
+  });
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mime });
+    const url  = URL.createObjectURL(blob);
+    const dl   = document.getElementById('dl-btn');
+    dl.href = url; dl.style.display = 'block';
+    const mb = (blob.size/1e6).toFixed(1);
+    log(`Done — ${mb} MB`, 'ok');
+    setStatus(`Complete · ${mb} MB`);
+    document.getElementById('render-btn').disabled = false;
+  };
+
+  recorder.start(100);
+  await new Promise(r => requestAnimationFrame(r));
+  const audioStart = audioCtx2.currentTime;
+  src.start(audioStart);
+
+  const renderer = buildRetroRenderer(W, H, lyricsData, duration, lineAssign,
+                     document.getElementById('inp-title').value.trim() || 'My Victory Is Sweet!');
+
+  function frame() {
+    const t = Math.max(0, audioCtx2.currentTime - audioStart);
+    if (t > duration + 0.8) { try{src.stop();}catch(e){} recorder.stop(); return; }
+    renderer(ctx, t, W, H);
+    const pct = Math.min(100, t / duration * 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('pct-label').textContent = pct.toFixed(1) + '%';
+    setStatus(`Rendering… ${t.toFixed(2)}s / ${duration.toFixed(2)}s`);
+    requestAnimationFrame(frame);
+  }
+  setStatus('Recording…');
+  requestAnimationFrame(frame);
+}
+
+function setStatus(s) { document.getElementById('prog-status').textContent = s; }
+
+// ─── RETRO RENDERER ───────────────────────────────────────────────────────────
+function buildRetroRenderer(W, H, data, totalDuration, lineAssign, songTitle) {
+  songTitle = songTitle || 'My Victory Is Sweet!';
+
+  const allLines  = data;
+  const lineRanges = allLines.map(line => ({
+    start: line.words[0].timestamp,
+    end:   line.words[line.words.length-1].timestamp + line.words[line.words.length-1].duration
+  }));
+  const firstBeat = lineRanges[0].start;
+
+  // Scanline overlay canvas
+  const scanCv = document.createElement('canvas');
+  scanCv.width = W; scanCv.height = H;
+  const sc = scanCv.getContext('2d');
+  for (let y = 0; y < H; y += 4) { sc.fillStyle='rgba(0,0,0,0.28)'; sc.fillRect(0,y,W,2); }
+
+  // Pre-bake a noise canvas for CRT grain
+  const noiseCv = document.createElement('canvas');
+  noiseCv.width = 256; noiseCv.height = 256;
+  const nc = noiseCv.getContext('2d');
+  const nd = nc.createImageData(256,256);
+  for (let i=0;i<nd.data.length;i+=4) {
+    const v=Math.random()*40|0; nd.data[i]=nd.data[i+1]=nd.data[i+2]=v; nd.data[i+3]=255;
+  }
+  nc.putImageData(nd,0,0);
+
+  // ── PALETTE ──
+  const AMBER   = '#ffaa00';
+  const GOLD    = '#ffcc00';
+  const DIM     = 'rgba(255,170,0,0.28)';
+  const SAID    = 'rgba(255,200,80,0.5)';
+  const INACTIVE= 'rgba(255,170,0,0.22)';
+  const BG1     = '#100800';
+  const BG2     = '#0a0500';
+
+  // Fonts
+  const FONT_MAIN = (sz, bold) => `${bold?'700':'400'} ${sz}px 'Outfit', sans-serif`;
+  const FONT_PX   = (sz)       => `${sz}px 'Press Start 2P', monospace`;
+
+  // Layout constants
+  // ── Vertical stack (all as fractions of H) ──────────────────────────────
+  // Intro text above head  : H*0.08  → H*0.18   (~108px at 1080p)
+  // Rapper head top        : H*0.18
+  // Rapper hip pivot (CY)  : head_top + 38pu*scale  ≈ H*0.18 + H*0.152 = H*0.332
+  // Rapper feet            : CY + 16pu*scale         ≈ H*0.332 + H*0.064 = H*0.396
+  // Gap                    : H*0.024
+  // Lyric current line     : H*0.42  (just below centre — feels centred with
+  //                          one done line above and upcoming lines below)
+  // ─────────────────────────────────────────────────────────────────────────
+  const RAPPER_SCALE      = H * 0.004;
+  const RAPPER_CX         = Math.round(W * 0.5);
+  const RAPPER_CY         = Math.round(H * 0.33);
+  const LYRIC_CENTRE_Y    = Math.round(H * 0.54);
+  const LINE_H            = Math.round(H * 0.11);
+  const BASE_FS           = Math.round(H * 0.054);
+  const DONE_FS           = Math.round(H * 0.036);
+  const LINE_LOOKAHEAD    = 0.35;
+
+  // ── Line index logic ──
+  function getCurrentLineIdx(t) {
+    if (t < lineRanges[0].start - LINE_LOOKAHEAD) return 0;
+    let cur = 0;
+    for (let i = 1; i < allLines.length; i++) {
+      const prevDone = t >= lineRanges[i-1].end;
+      const iNear    = t >= lineRanges[i].start - LINE_LOOKAHEAD;
+      if (prevDone && iNear) cur = i;
+      else if (!prevDone) break;
+    }
+    return cur;
+  }
+
+  // ── VHS intro state ──
+  let introFrameCount = 0;
+
+  // Beat visualiser state: amplitude history
+  let beatPulse = 0;
+
+  // ── Stars (scrolling background deco) ──
+  const STARS = Array.from({length:60}, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    spd: Math.random() * 0.3 + 0.05,
+    sz: Math.random() < 0.2 ? 2 : 1,
+    bright: Math.random() * 0.5 + 0.2
+  }));
+
+  // ── Floating pixel deco squares ──
+  const PIXELS = Array.from({length:30}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    vx:(Math.random()-0.5)*0.8, vy:(Math.random()-0.5)*0.8,
+    sz: (Math.random()*3|0)*2+2,
+    hue: Math.random() < 0.5 ? AMBER : GOLD,
+    alpha: Math.random()*0.3+0.05
+  }));
+
+  // ── Rapper animation clock ──
+  let rapperFrameT = 0;
+
+  return function render(ctx, t, W, H) {
+    introFrameCount++;
+    rapperFrameT = (rapperFrameT + 0.012) % 1;
+
+    const isIntro = t < firstBeat;
+    // how far through the intro we are (0→1)
+    const introProgress = Math.min(1, t / Math.max(0.01, firstBeat));
+
+    // ── BACKGROUND ────────────────────────────────────────────────────────
+    // Warm dark base gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#0e0600');
+    bgGrad.addColorStop(1, '#060300');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Vignette
+    const vg = ctx.createRadialGradient(W/2, H/2, H*0.1, W/2, H/2, H*0.85);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.82)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── SCROLLING STARS ────────────────────────────────────────────────────
+    STARS.forEach(s => {
+      s.x -= s.spd;
+      if (s.x < 0) { s.x = W; s.y = Math.random() * H; }
+      ctx.fillStyle = `rgba(255,220,100,${s.bright * 0.6})`;
+      ctx.fillRect(s.x|0, s.y|0, s.sz, s.sz);
+    });
+
+    // ── FLOATING PIXEL DECO ────────────────────────────────────────────────
+    PIXELS.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.fillStyle = p.hue.replace(')', `,${p.alpha})`).replace('rgb','rgba') || `rgba(255,170,0,${p.alpha})`;
+      ctx.globalAlpha = p.alpha;
+      ctx.fillRect(p.x|0, p.y|0, p.sz, p.sz);
+      ctx.globalAlpha = 1;
+    });
+
+    // ── GRID LINES (retro floor) ─────────────────────────────────────────
+    // Horizontal perspective lines in lower half
+    {
+      const horizon = RAPPER_CY + Math.round(20 * RAPPER_SCALE);
+      const speed   = (t * 30) % 60;
+      ctx.strokeStyle = 'rgba(255,150,0,0.08)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 16; i++) {
+        const y = horizon + ((i * 60 + speed) % (H - horizon));
+        const spread = ((y - horizon) / (H - horizon));
+        ctx.beginPath();
+        ctx.moveTo(W/2 - spread * W/2, y);
+        ctx.lineTo(W/2 + spread * W/2, y);
+        ctx.stroke();
+      }
+      // vertical converging lines
+      ctx.strokeStyle = 'rgba(255,150,0,0.05)';
+      for (let i = -8; i <= 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(W/2, horizon);
+        ctx.lineTo(W/2 + i * (W/8), H);
+        ctx.stroke();
+      }
+    }
+
+    // ── INTRO SEQUENCE ────────────────────────────────────────────────────
+    if (isIntro) {
+      drawIntro(ctx, t, introProgress, W, H, firstBeat);
+    }
+
+    // ── 8-BIT RAPPER ─────────────────────────────────────────────────────
+    const curIdx   = getCurrentLineIdx(t);
+    const assignKey = isIntro ? -1 : curIdx;
+    const assign    = lineAssign[assignKey] || lineAssign[0] || { rapperId:'crown', animMode:'idle' };
+    const rapper    = (window.RAPPERS || {})[assign.rapperId];
+
+    if (rapper) {
+      // Beat-pulse scale modifier
+      beatPulse = Math.max(0, beatPulse - 0.03);
+      // Fake beat on downbeats using time mod
+      const beatPhase = (t * 2) % 1; // ~120bpm assumption – cosmetic only
+      if (beatPhase < 0.05) beatPulse = Math.min(1, beatPulse + 0.6);
+
+      const rapperScale = RAPPER_SCALE * (1 + beatPulse * 0.04);
+      const rapperY     = isIntro
+        ? RAPPER_CY + Math.sin(t * 1.5) * 8  // gentle float during intro
+        : RAPPER_CY;
+
+      // Fade rapper in during intro
+      ctx.globalAlpha = isIntro ? Math.min(1, introProgress * 2) : 1;
+      rapper.draw(ctx, RAPPER_CX, rapperY, rapperScale, assign.animMode, rapperFrameT);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── LYRICS ────────────────────────────────────────────────────────────
+    if (!isIntro || introProgress > 0.6) {
+      const lyricsAlpha = isIntro ? (introProgress - 0.6) / 0.4 : 1;
+      ctx.globalAlpha = lyricsAlpha;
+      drawLyrics(ctx, t, curIdx, W, H);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── PROGRESS BAR ─────────────────────────────────────────────────────
+    const pbY = H - 10;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(0, pbY, W, 6);
+    const pgGrad = ctx.createLinearGradient(0, 0, W, 0);
+    pgGrad.addColorStop(0, AMBER);
+    pgGrad.addColorStop(1, GOLD);
+    ctx.fillStyle = pgGrad;
+    ctx.fillRect(0, pbY, W * (t / totalDuration), 6);
+
+    // ── TIMECODE ─────────────────────────────────────────────────────────
+    ctx.font = FONT_PX(14);
+    ctx.fillStyle = 'rgba(255,170,0,0.3)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(fmtTime(t), W - 24, H - 18);
+
+    // ── CRT GRAIN ────────────────────────────────────────────────────────
+    ctx.globalAlpha = 0.04;
+    ctx.drawImage(noiseCv,
+      (Math.random()*128)|0, (Math.random()*128)|0, 256, 256,
+      0, 0, W, H);
+    ctx.globalAlpha = 1;
+
+    // ── SCANLINES ─────────────────────────────────────────────────────────
+    ctx.drawImage(scanCv, 0, 0);
+
+    // ── CRT FLICKER ───────────────────────────────────────────────────────
+    if (Math.random() < 0.015) {
+      ctx.fillStyle = `rgba(255,180,0,${Math.random()*0.025})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  };
+
+  // ── INTRO SEQUENCE DRAW ──────────────────────────────────────────────────
+  // Layout anchored to the rapper:
+  //   RAPPER_CY       = vertical centre of rapper sprite
+  //   rapperTopY      = approx top of rapper's head (CY - ~110px at scale)
+  //   rapperBottomY   = approx feet of rapper (CY + ~50px at scale)
+  //
+  // Three phases timed to firstBeat (total intro duration):
+  //   Phase A  0% → 30%  : ▶ PLAY glitches in above rapper, VHS bar below it
+  //   Phase B  25% → 70% : PLAY fades out, song title fades in above rapper
+  //   Phase C  65% → 100%: title stays, GET READY blinks just below rapper feet,
+  //                         countdown dots tick in a row beneath GET READY
+
+  function drawIntro(ctx, t, progress, W, H, firstBeat) {
+    const timeLeft = firstBeat - t;
+
+    // Rapper geometry in canvas pixels
+    // RAPPER_CY is the hip-pivot (H*0.33). Head top ~50pu above, feet ~16pu below.
+    const pu          = RAPPER_SCALE;
+    const rapperHeadY = RAPPER_CY - 50 * pu;   // top of head
+    const rapperFeetY = RAPPER_CY + 16 * pu;   // bottom of feet
+
+    // Label anchors — snug around the rapper
+    const aboveY = rapperHeadY - 24;   // ▶ PLAY / song title just above head
+    const belowY = rapperFeetY + 28;   // GET READY just below feet
+    const dotsY  = belowY + 46;        // countdown dot row
+
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    // ── Phase A: ▶ PLAY (0 → 35%) ──────────────────────────────────────────
+    if (progress < 0.35) {
+      const fadeIn  = Math.min(1, progress / 0.10);           // 0→1 in first 10%
+      const fadeOut = progress > 0.20 ? 1 - (progress - 0.20) / 0.15 : 1; // fade out 20→35%
+      const alpha   = Math.max(0, fadeIn * fadeOut);
+
+      // Random VHS glitch bars during glitch-in
+      if (progress < 0.12 && Math.random() < 0.4) {
+        const gy = aboveY - 60 + Math.random() * 120;
+        ctx.fillStyle = `rgba(255,170,0,${Math.random()*0.1})`;
+        ctx.fillRect(0, gy, W, Math.random() * 6 + 1);
+      }
+
+      ctx.globalAlpha = alpha;
+      drawVHSLabel(ctx, W / 2, aboveY, W);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Phase B: Song title above rapper head (22% → end) ──────────────────
+    if (progress > 0.22) {
+      const fadeIn = Math.min(1, (progress - 0.22) / 0.14); // 0→1 over 14%
+      ctx.globalAlpha = fadeIn;
+      drawSongTitle(ctx, t, progress, W / 2, aboveY, W);
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Phase C: GET READY + dots below feet (60% → end) ───────────────────
+    if (progress > 0.60) {
+      const fadeIn = Math.min(1, (progress - 0.60) / 0.12);
+      ctx.globalAlpha = fadeIn;
+      drawGetReady(ctx, timeLeft, W, belowY, dotsY);
+      ctx.globalAlpha = 1;
+    }
+
+    // Always: corner deco
+    drawCornerDeco(ctx, W, H);
+  }
+
+  // ▶ PLAY label + VHS bar
+  function drawVHSLabel(ctx, cx, cy, W) {
+    ctx.font      = FONT_PX(22);
+    ctx.fillStyle = AMBER;
+    ctx.shadowColor = GOLD;
+    ctx.shadowBlur  = 14;
+    ctx.fillText('▶  PLAY', cx, cy);
+    ctx.shadowBlur = 0;
+
+    // VHS quality bar just below text
+    const bw = 260, bx = cx - bw/2;
+    ctx.fillStyle = 'rgba(255,170,0,0.12)';
+    ctx.fillRect(bx, cy + 36, bw, 4);
+    ctx.fillStyle = AMBER;
+    ctx.fillRect(bx, cy + 36, bw * 0.75, 4);
+
+    ctx.font      = FONT_PX(8);
+    ctx.fillStyle = 'rgba(255,170,0,0.45)';
+    ctx.fillText('SP  ■  HI-FI  ◆  STEREO', cx, cy + 56);
+  }
+
+  // Song title with retro pixel-shadow depth + pulse
+  function drawSongTitle(ctx, t, progress, cx, cy, W) {
+    const pulse = 1 + Math.sin(t * 2.5) * 0.012;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(pulse, pulse);
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Split title into up to 2 lines if long (break on last space before midpoint)
+    const title = songTitle.toUpperCase();
+    const lines  = splitTitleLines(title);
+
+    const lineSpacing = 54;
+    const totalH      = (lines.length - 1) * lineSpacing;
+    const startY      = -totalH / 2;
+
+    lines.forEach((line, li) => {
+      const ly = startY + li * lineSpacing;
+      // pixel-shadow layers
+      const shadows = ['#7a3300', '#4a1a00'];
+      shadows.forEach((sc, si) => {
+        ctx.font      = FONT_PX(40);
+        ctx.fillStyle = sc;
+        ctx.fillText(line, (si+1)*3, ly + (si+1)*3);
+      });
+      // main gold text
+      ctx.font        = FONT_PX(40);
+      ctx.fillStyle   = GOLD;
+      ctx.shadowColor = AMBER;
+      ctx.shadowBlur  = 18;
+      ctx.fillText(line, 0, ly);
+      ctx.shadowBlur  = 0;
+    });
+
+    // Small "NOW PLAYING" label above
+    ctx.font      = FONT_PX(9);
+    ctx.fillStyle = 'rgba(255,170,0,0.55)';
+    ctx.fillText('── NOW PLAYING ──', 0, startY - 34);
+
+    ctx.restore();
+  }
+
+  // GET READY blinking text + countdown pixel dots
+  function drawGetReady(ctx, timeLeft, W, labelY, dotsY) {
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Blink on/off at ~2 Hz
+    if (Math.floor(timeLeft * 2) % 2 === 0) {
+      ctx.font        = FONT_PX(20);
+      ctx.fillStyle   = GOLD;
+      ctx.shadowColor = AMBER;
+      ctx.shadowBlur  = 18;
+      ctx.fillText('GET READY', W / 2, labelY);
+      ctx.shadowBlur  = 0;
+    }
+
+    // Countdown pixel dots — fill from right to left as time runs out
+    const maxDots   = 16;
+    const dotSize   = 12;
+    const dotGap    = 8;
+    const rowW      = maxDots * (dotSize + dotGap) - dotGap;
+    const startX    = W / 2 - rowW / 2;
+    // how many dots are still lit (counts down)
+    const litDots   = Math.min(maxDots, Math.ceil(timeLeft * (maxDots / 4)));
+
+    for (let i = 0; i < maxDots; i++) {
+      const dx  = startX + i * (dotSize + dotGap);
+      const lit = i < litDots;
+      // last lit dot pulses
+      const isLast = lit && i === litDots - 1;
+      ctx.fillStyle = isLast  ? GOLD
+                    : lit     ? 'rgba(255,170,0,0.55)'
+                    :           'rgba(255,170,0,0.10)';
+      if (isLast) { ctx.shadowColor = GOLD; ctx.shadowBlur = 12; }
+      ctx.fillRect(dx, dotsY - dotSize/2, dotSize, dotSize);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Split a title string into 1 or 2 display lines
+  function splitTitleLines(title) {
+    if (title.length <= 16) return [title];
+    // find best break point near the middle
+    const mid = Math.floor(title.length / 2);
+    let breakAt = title.lastIndexOf(' ', mid);
+    if (breakAt <= 0) breakAt = title.indexOf(' ', mid);
+    if (breakAt <= 0) return [title];
+    return [title.slice(0, breakAt).trim(), title.slice(breakAt).trim()];
+  }
+
+  function drawCornerDeco(ctx, W, H) {
+    ctx.strokeStyle = 'rgba(255,170,0,0.2)';
+    ctx.lineWidth = 2;
+    const cs = 40; // corner size
+    // top-left
+    ctx.beginPath(); ctx.moveTo(20, 20+cs); ctx.lineTo(20,20); ctx.lineTo(20+cs,20); ctx.stroke();
+    // top-right
+    ctx.beginPath(); ctx.moveTo(W-20-cs,20); ctx.lineTo(W-20,20); ctx.lineTo(W-20,20+cs); ctx.stroke();
+    // bottom-left
+    ctx.beginPath(); ctx.moveTo(20,H-20-cs); ctx.lineTo(20,H-20); ctx.lineTo(20+cs,H-20); ctx.stroke();
+    // bottom-right
+    ctx.beginPath(); ctx.moveTo(W-20-cs,H-20); ctx.lineTo(W-20,H-20); ctx.lineTo(W-20,H-20-cs); ctx.stroke();
+  }
+
+  // ── LYRICS DRAW ──────────────────────────────────────────────────────────
+  function drawLyrics(ctx, t, curIdx, W, H) {
+    const from    = Math.max(0, curIdx - 2);
+    const to      = Math.min(allLines.length - 1, curIdx + 3);
+    const centerY = LYRIC_CENTRE_Y;
+
+    for (let i = from; i <= to; i++) {
+      const line      = allLines[i];
+      const lr        = lineRanges[i];
+      const isDone    = i < curIdx;
+      const isCurrent = i === curIdx;
+      const isUpcoming = !isDone && !isCurrent;
+
+      const relIdx = i - curIdx;
+      const yPos   = centerY + relIdx * LINE_H;
+      // clip: don't draw above rapper feet or below progress bar
+      if (yPos < RAPPER_CY + 20 || yPos > H - 30) continue;
+
+      let opacity = 1, scale = 1;
+      if (isDone)     { opacity = 0.28; scale = 0.91; }
+      if (isUpcoming) {
+        const dist = lr.start - t;
+        opacity = Math.min(1, Math.max(0.10, 1 - dist * 0.28));
+        scale   = Math.min(1, Math.max(0.85, 1 - dist * 0.04));
+      }
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.translate(W / 2, yPos);
+      ctx.scale(scale, scale);
+      drawRetroLine(ctx, line, t, isCurrent, isDone, W);
+      ctx.restore();
+    }
+  }
+
+  function drawRetroLine(ctx, line, t, isCurrent, isDone, W) {
+    const words  = line.words;
+    const fs     = isDone ? DONE_FS : BASE_FS;
+    const GAP    = Math.round(fs * 0.3);
+
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = FONT_MAIN(fs, false);
+    const wordWidths = words.map(w => ctx.measureText(w.text).width);
+    const totalW     = wordWidths.reduce((a,b)=>a+b,0) + GAP*(words.length-1);
+    const maxW       = W * 0.78;
+    const scl        = totalW > maxW ? maxW/totalW : 1;
+
+    let x = -(totalW * scl) / 2;
+
+    words.forEach((w, wi) => {
+      const ww     = wordWidths[wi] * scl;
+      const wStart = w.timestamp;
+      const wEnd   = w.timestamp + w.duration;
+      const active = t >= wStart && t < wEnd;
+      const said   = t >= wEnd;
+      const prog   = active ? (t - wStart) / w.duration : 0;
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+
+      if (isCurrent) {
+        if (active) {
+          const sz = fs * scl * (1 + prog * 0.06);
+          ctx.font = FONT_MAIN(sz, true);
+          ctx.shadowColor = GOLD;
+          ctx.shadowBlur  = 14 + prog * 18;
+          ctx.fillStyle   = GOLD;
+          ctx.fillText(w.text, x, 0);
+          ctx.shadowBlur  = 0;
+          // Underline fill
+          ctx.fillStyle   = GOLD;
+          ctx.globalAlpha = 0.7;
+          ctx.fillRect(x, fs*scl*0.64, ww*prog, Math.max(2, fs*scl*0.065));
+          ctx.globalAlpha = 1;
+        } else if (said) {
+          ctx.font      = FONT_MAIN(fs*scl, false);
+          ctx.fillStyle = SAID;
+          ctx.fillText(w.text, x, 0);
+        } else {
+          ctx.font      = FONT_MAIN(fs*scl, false);
+          ctx.fillStyle = 'rgba(255,220,140,0.9)';
+          ctx.fillText(w.text, x, 0);
+        }
+      } else {
+        ctx.font      = FONT_MAIN(fs*scl, false);
+        ctx.fillStyle = INACTIVE;
+        ctx.fillText(w.text, x, 0);
+      }
+
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1;
+      x += ww + GAP * scl;
+    });
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmtTime(s) {
+  const m  = Math.floor(s/60);
+  const ss = Math.floor(s%60);
+  return `${m}:${ss.toString().padStart(2,'0')}`;
+}
+</script>
+</body>
+</html>
