@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyrics Video Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg: #080810;
+  --card: #0f0f1a;
+  --border: #1c1c30;
+  --accent: #e8ff47;
+  --accent2: #ff3d6e;
+  --text: #e0e0f0;
+  --muted: #4a4a6a;
+  --green: #00ffaa;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px 60px;
+}
+
+/* subtle grid bg */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 820px; }
+
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(42px, 8vw, 84px);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 60px rgba(232,255,71,0.25);
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+
+/* Upload area */
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--card);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+.upload-zone.ready { border-color: var(--green); border-style: solid; }
+
+.upload-zone input { display: none; }
+
+.uz-icon { font-size: 32px; margin-bottom: 10px; }
+.uz-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.uz-sub { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+.uz-filename {
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+/* Settings */
+.settings-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.setting {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.setting label {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.setting select, .setting input[type=range] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  padding: 6px 8px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.setting select option { background: #111; }
+
+/* Theme preview dots */
+.theme-dots { display: flex; gap: 6px; margin-top: 8px; }
+.theme-dot { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s; }
+.theme-dot:hover { transform: scale(1.2); }
+.theme-dot.active { border-color: white; }
+
+/* Render button */
+.render-btn {
+  width: 100%;
+  padding: 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: #08080f;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+}
+
+.render-btn:hover:not(:disabled) { background: #f5ff70; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(232,255,71,0.3); }
+.render-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Progress */
+.progress-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: none;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.progress-label span { color: var(--accent); font-weight: 600; }
+
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.progress-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  letter-spacing: 0.06em;
+}
+
+/* Preview canvas */
+.preview-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  display: none;
+}
+
+.preview-wrap canvas {
+  width: 100%;
+  display: block;
+}
+
+/* Download */
+.download-btn {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 2px solid var(--green);
+  border-radius: 12px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  color: var(--green);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: none;
+  text-align: center;
+  text-decoration: none;
+}
+
+.download-btn:hover { background: rgba(0,255,170,0.1); transform: translateY(-1px); }
+
+/* Log */
+.log {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 100px;
+  overflow-y: auto;
+  display: none;
+  line-height: 1.6;
+}
+
+.log .ok { color: var(--green); }
+.log .warn { color: var(--accent); }
+.log .err { color: var(--accent2); }
+
+/* Frame preview panel */
+.frame-preview-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.frame-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fp-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fp-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lyrics<br>Video Maker</h1>
+  <p class="subtitle">MP3 + Timed JSON → WebM Video · Word-perfect karaoke</p>
+
+  <div class="upload-grid">
+    <div class="upload-zone" id="zone-audio" onclick="document.getElementById('inp-audio').click()">
+      <input type="file" id="inp-audio" accept="audio/mp3,audio/mpeg,audio/*">
+      <div class="uz-icon">🎵</div>
+      <div class="uz-label">Audio File</div>
+      <div class="uz-sub">MP3 / WAV / AAC</div>
+      <div class="uz-filename" id="audio-name">Drop or click to upload</div>
+    </div>
+    <div class="upload-zone" id="zone-json" onclick="document.getElementById('inp-json').click()">
+      <input type="file" id="inp-json" accept="application/json,.json">
+      <div class="uz-icon">📝</div>
+      <div class="uz-label">Lyrics JSON</div>
+      <div class="uz-sub">Timed words + lines</div>
+      <div class="uz-filename" id="json-name">Drop or click to upload</div>
+    </div>
+    <div class="upload-zone" id="zone-bg" onclick="document.getElementById('inp-bg').click()" style="grid-column: 1 / -1;">
+      <input type="file" id="inp-bg" accept="image/*,video/*">
+      <div class="uz-icon">🖼️ / 🎬</div>
+      <div class="uz-label">Background Media <span style="color:var(--muted);font-size:11px;font-weight:400;">(optional)</span></div>
+      <div class="uz-sub">Image or Video — covers full frame</div>
+      <div class="uz-filename" id="bg-name">Drop or click to upload</div>
+    </div>
+  </div>
+
+  <div class="settings-row">
+    <div class="setting">
+      <label>Resolution</label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:6px 8px;opacity:0.6;">1920 × 1080 (1080p)</div>
+    </div>
+    <div class="setting">
+      <label>Visual Style</label>
+      <select id="sel-style">
+        <option value="neon">Neon Glow</option>
+        <option value="minimal">Clean Minimal</option>
+        <option value="cinematic">Cinematic</option>
+        <option value="retro">Retro Tape</option>
+      </select>
+    </div>
+    <div class="setting">
+      <label>Video Bitrate</label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:6px 8px;opacity:0.6;">20 Mbps (Ultra)</div>
+    </div>
+  </div>
+
+  <div class="frame-preview-wrap" id="frame-preview-wrap" style="display:none;">
+    <div class="frame-preview-header">
+      <span class="fp-title">🎬 Frame Preview</span>
+      <div class="fp-controls">
+        <label for="frame-slider" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Seek</label>
+        <input type="range" id="frame-slider" min="0" max="100" value="0" step="0.1" style="width:200px;accent-color:var(--accent);">
+        <span id="frame-time" style="font-size:12px;color:var(--accent);min-width:42px;">0:00</span>
+      </div>
+    </div>
+    <canvas id="frame-canvas" style="width:100%;display:block;border-radius:0 0 10px 10px;"></canvas>
+  </div>
+
+  <button class="render-btn" id="render-btn" disabled>▶ RENDER VIDEO</button>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">Rendering <span id="pct-label">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    <div class="progress-status" id="prog-status">Initialising…</div>
+  </div>
+
+  <div class="preview-wrap" id="preview-wrap">
+    <canvas id="preview-canvas"></canvas>
+  </div>
+
+  <a class="download-btn" id="download-btn" download="lyrics-video.webm">⬇ DOWNLOAD VIDEO (WebM)</a>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let audioFile = null, lyricsData = null;
+let audioBuffer = null;
+let bgImage = null; // optional background image element
+let bgVideo = null; // optional background video element
+
+// ─── Logging ─────────────────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  logEl.style.display = 'block';
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = '› ' + msg;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ─── File inputs ─────────────────────────────────────────────────────────────
+function setupDrop(zone, input, nameEl, onFile) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) { input.files = e.dataTransfer.files; onFile(f); }
+  });
+  input.addEventListener('change', () => { if (input.files[0]) onFile(input.files[0]); });
+}
+
+setupDrop(
+  document.getElementById('zone-audio'),
+  document.getElementById('inp-audio'),
+  document.getElementById('audio-name'),
+  f => {
+    audioFile = f;
+    document.getElementById('audio-name').textContent = f.name;
+    document.getElementById('zone-audio').classList.add('ready');
+    log('Audio loaded: ' + f.name, 'ok');
+    checkReady();
+  }
+);
+
+setupDrop(
+  document.getElementById('zone-json'),
+  document.getElementById('inp-json'),
+  document.getElementById('json-name'),
+  f => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        lyricsData = JSON.parse(e.target.result);
+        document.getElementById('json-name').textContent = f.name;
+        document.getElementById('zone-json').classList.add('ready');
+        log(`Lyrics loaded: ${lyricsData.length} lines, ${lyricsData.flatMap(l=>l.words).length} words`, 'ok');
+        checkReady();
+      } catch(err) {
+        log('JSON parse error: ' + err.message, 'err');
+      }
+    };
+    r.readAsText(f);
+  }
+);
+
+// Background media upload
+setupDrop(
+  document.getElementById('zone-bg'),
+  document.getElementById('inp-bg'),
+  document.getElementById('bg-name'),
+  f => {
+    if (f.type.startsWith('video/')) {
+      bgImage = null;
+      bgVideo = document.createElement('video');
+      bgVideo.muted = true;
+      bgVideo.loop = true;
+      bgVideo.playsInline = true;
+      bgVideo.src = URL.createObjectURL(f);
+      bgVideo.onloadeddata = () => {
+        document.getElementById('bg-name').textContent = f.name;
+        document.getElementById('zone-bg').classList.add('ready');
+        log('Background video loaded: ' + f.name, 'ok');
+        updateFramePreview();
+      };
+    } else {
+      bgVideo = null;
+      const r = new FileReader();
+      r.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          bgImage = img;
+          document.getElementById('bg-name').textContent = f.name;
+          document.getElementById('zone-bg').classList.add('ready');
+          log('Background image loaded: ' + f.name, 'ok');
+          updateFramePreview();
+        };
+        img.src = e.target.result;
+      };
+      r.readAsDataURL(f);
+    }
+  }
+);
+
+function checkReady() {
+  document.getElementById('render-btn').disabled = !(audioFile && lyricsData);
+  if (lyricsData) updateFramePreview();
+}
+
+// ─── Frame Preview ────────────────────────────────────────────────────────────
+let framePreviewRenderer = null;
+let framePreviewDuration = 0;
+
+function updateFramePreview() {
+  if (!lyricsData) return;
+
+  const W = 1920, H = 1080;
+  const style = document.getElementById('sel-style').value;
+
+  // Compute duration estimate from lyrics data
+  const allWords = lyricsData.flatMap(l => l.words);
+  const lastWord = allWords[allWords.length - 1];
+  const dur = lastWord.timestamp + lastWord.duration + 3;
+  framePreviewDuration = dur;
+
+  const wrap = document.getElementById('frame-preview-wrap');
+  wrap.style.display = 'block';
+
+  const canvas = document.getElementById('frame-canvas');
+  canvas.width = W;
+  canvas.height = H;
+
+  framePreviewRenderer = buildRenderer(style, W, H, lyricsData, dur, bgImage, bgVideo);
+
+  const slider = document.getElementById('frame-slider');
+  const timeEl = document.getElementById('frame-time');
+
+  function drawFrame() {
+    const t = (parseFloat(slider.value) / 100) * framePreviewDuration;
+    timeEl.textContent = fmtTime(t);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    
+    if (bgVideo) {
+      bgVideo.currentTime = (t % bgVideo.duration) || 0;
+    }
+    
+    framePreviewRenderer(ctx, t, W, H);
+  }
+
+  slider.oninput = drawFrame;
+  drawFrame();
+}
+
+// Re-render frame preview when style changes
+document.getElementById('sel-style').addEventListener('change', () => {
+  framePreviewRenderer = null;
+  updateFramePreview();
+});
+
+// ─── Main render ─────────────────────────────────────────────────────────────
+document.getElementById('render-btn').addEventListener('click', startRender);
+
+async function startRender() {
+  document.getElementById('render-btn').disabled = true;
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('download-btn').style.display = 'none';
+
+  const rw = 1920, rh = 1080;
+  const style = document.getElementById('sel-style').value;
+  const bitrate = 20000000;
+
+  setStatus('Decoding audio…');
+
+  // Decode audio
+  const arrayBuf = await audioFile.arrayBuffer();
+  const actx = new AudioContext();
+  audioBuffer = await actx.decodeAudioData(arrayBuf);
+  const duration = audioBuffer.duration;
+  log(`Audio duration: ${duration.toFixed(2)}s @ ${audioBuffer.sampleRate}Hz`, 'ok');
+
+  // Setup canvas
+  const canvas = document.getElementById('preview-canvas');
+  canvas.width = rw;
+  canvas.height = rh;
+  document.getElementById('preview-wrap').style.display = 'block';
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // Setup MediaRecorder
+  const FPS = 60;
+  const canvasStream = canvas.captureStream(FPS);
+
+  // Add audio track
+  const audioCtx2 = new AudioContext();
+  const dest = audioCtx2.createMediaStreamDestination();
+  const src = audioCtx2.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(dest);
+  const audioStream = dest.stream;
+  const audioTrack = audioStream.getAudioTracks()[0];
+  canvasStream.addTrack(audioTrack);
+
+  // Pick codec
+  const codecs = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  let mimeType = codecs.find(c => MediaRecorder.isTypeSupported(c)) || 'video/webm';
+  log(`Codec: ${mimeType}`, 'ok');
+
+  const recorder = new MediaRecorder(canvasStream, {
+    mimeType,
+    videoBitsPerSecond: bitrate,
+    audioBitsPerSecond: 320000,
+  });
+
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+  recorder.onstop = () => {
+    if (bgVideo) bgVideo.pause();
+    const blob = new Blob(chunks, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const dl = document.getElementById('download-btn');
+    dl.href = url;
+    dl.style.display = 'block';
+    const mb = (blob.size / 1e6).toFixed(1);
+    log(`Done! File size: ${mb} MB`, 'ok');
+    setStatus(`Complete — ${mb} MB · Click download below`);
+    document.getElementById('render-btn').disabled = false;
+  };
+
+  // We must start recorder FIRST, then note the AudioContext time,
+  // then start the source — so audio and canvas are locked to the same clock.
+  if (bgVideo) {
+    bgVideo.currentTime = 0;
+    bgVideo.play();
+  }
+  recorder.start(100);
+
+  // Wait one rAF so recorder is truly running before we start audio
+  await new Promise(r => requestAnimationFrame(r));
+
+  // Record the AudioContext time at the moment audio begins
+  const audioStartTime = audioCtx2.currentTime;
+  src.start(audioStartTime);
+
+  const renderer = buildRenderer(style, rw, rh, lyricsData, duration, bgImage, bgVideo);
+
+  function frame() {
+    // t = exact audio playback position, locked to AudioContext clock
+    const t = audioCtx2.currentTime - audioStartTime;
+
+    if (t > duration + 0.5) {
+      try { src.stop(); } catch(e) {}
+      recorder.stop();
+      return;
+    }
+
+    renderer(ctx, Math.max(0, t), rw, rh);
+
+    const pct = Math.min(100, (t / duration) * 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('pct-label').textContent = pct.toFixed(1) + '%';
+    setStatus(`Rendering… ${Math.max(0,t).toFixed(2)}s / ${duration.toFixed(2)}s`);
+    requestAnimationFrame(frame);
+  }
+
+  setStatus('Recording…');
+  requestAnimationFrame(frame);
+}
+
+function setStatus(s) { document.getElementById('prog-status').textContent = s; }
+
+// ─── Renderer factory ─────────────────────────────────────────────────────────
+function buildRenderer(style, W, H, data, totalDuration, bgImage, bgVideo) {
+  // Pre-flatten words with global timing
+  const allWords = data.flatMap(l => l.words);
+  const allLines = data;
+
+  // Particle pool for neon style
+  const particles = Array.from({length: 80}, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random()-0.5)*0.4, vy: (Math.random()-0.5)*0.4,
+    r: Math.random()*2+0.5, o: Math.random()*0.5+0.1
+  }));
+
+  // Scanlines canvas for retro
+  let scanlineCanvas = null;
+  if (style === 'retro') {
+    scanlineCanvas = document.createElement('canvas');
+    scanlineCanvas.width = W; scanlineCanvas.height = H;
+    const sc = scanlineCanvas.getContext('2d');
+    for (let y = 0; y < H; y += 4) {
+      sc.fillStyle = 'rgba(0,0,0,0.35)';
+      sc.fillRect(0, y, W, 2);
+    }
+  }
+
+  // Pre-compute each line's absolute start/end from its words
+  const lineRanges = allLines.map(line => ({
+    start: line.words[0].timestamp,
+    end:   line.words[line.words.length - 1].timestamp
+         + line.words[line.words.length - 1].duration
+  }));
+
+  // How many seconds before a line's first word to switch to it as "current"
+  const LINE_LOOKAHEAD = 0.35;
+
+  // getCurrentLineIdx: returns which line is "current" at time t.
+  // RULE: switch to line N only when line N-1's last word has FULLY finished
+  // (i.e. t >= lineRanges[N-1].end), then optionally pre-show N up to
+  // LINE_LOOKAHEAD seconds early.  This guarantees the last word of every
+  // line gets highlighted before we move on.
+  function getCurrentLineIdx(t) {
+    // Before any lyrics: return 0 so we show the first line centred (not a pile)
+    if (t < lineRanges[0].start - LINE_LOOKAHEAD) return 0;
+
+    let cur = 0;
+    for (let i = 1; i < allLines.length; i++) {
+      // We advance to line i only once the previous line's last word is done
+      // AND we're within LINE_LOOKAHEAD of line i starting (or it's already started)
+      const prevDone  = t >= lineRanges[i - 1].end;
+      const iNearby   = t >= lineRanges[i].start - LINE_LOOKAHEAD;
+      if (prevDone && iNearby) cur = i;
+      else if (!prevDone) break; // previous line still active – stop here
+    }
+    return cur;
+  }
+
+  // Easing
+  function easeOut(t) { return 1 - Math.pow(1-t,3); }
+
+  // Style configs
+  const STYLES = {
+    neon: {
+      bg: ['#08080f','#08080f'],
+      inactive: 'rgba(120,120,180,0.45)',
+      active: '#ffffff',
+      highlight: '#e8ff47',
+      glow: '#e8ff47',
+      font: `bold ${Math.round(H*0.055)}px 'Outfit'`,
+      fontDone: `300 ${Math.round(H*0.038)}px 'Outfit'`,
+    },
+    minimal: {
+      bg: ['#fafafa','#f0f0f0'],
+      inactive: 'rgba(40,40,60,0.3)',
+      active: '#111122',
+      highlight: '#e8002d',
+      glow: null,
+      font: `700 ${Math.round(H*0.052)}px 'Outfit'`,
+      fontDone: `300 ${Math.round(H*0.036)}px 'Outfit'`,
+    },
+    cinematic: {
+      bg: ['#000000','#0a0008'],
+      inactive: 'rgba(180,160,200,0.35)',
+      active: '#f0e8ff',
+      highlight: '#ff3d6e',
+      glow: '#ff3d6e',
+      font: `900 ${Math.round(H*0.06)}px 'Bebas Neue'`,
+      fontDone: `900 ${Math.round(H*0.04)}px 'Bebas Neue'`,
+    },
+    retro: {
+      bg: ['#1a0a00','#0a0800'],
+      inactive: 'rgba(255,180,60,0.3)',
+      active: '#fff5d0',
+      highlight: '#ffcc00',
+      glow: '#ffaa00',
+      font: `bold ${Math.round(H*0.054)}px 'Outfit'`,
+      fontDone: `300 ${Math.round(H*0.037)}px 'Outfit'`,
+    },
+  };
+
+  const S = STYLES[style] || STYLES.neon;
+  const isVertical = H > W;
+  const BASE_FONT_SIZE = Math.round((isVertical ? W : H) * 0.055);
+  const DONE_FONT_SIZE = Math.round((isVertical ? W : H) * 0.038);
+
+  return function render(ctx, t, W, H) {
+    // ── Background ──
+    if (bgImage || bgVideo) {
+      const media = bgImage || bgVideo;
+      const mWidth = media.videoWidth || media.width;
+      const mHeight = media.videoHeight || media.height;
+
+      // Draw background media, cover-fit
+      const scale = Math.max(W / mWidth, H / mHeight);
+      const sw = mWidth * scale, sh = mHeight * scale;
+      const sx = (W - sw) / 2, sy = (H - sh) / 2;
+      ctx.drawImage(media, sx, sy, sw, sh);
+      // Overlay darkening scrim so text stays readable
+      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+      ctx.fillRect(0, 0, W, H);
+    } else if (style === 'neon') {
+      ctx.fillStyle = '#06060e';
+      ctx.fillRect(0, 0, W, H);
+      // subtle radial glow center
+      const gr = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.6);
+      gr.addColorStop(0, 'rgba(40,20,80,0.4)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(0, 0, W, H);
+    } else if (style === 'minimal') {
+      ctx.fillStyle = '#f5f5f7';
+      ctx.fillRect(0, 0, W, H);
+      // top accent bar
+      ctx.fillStyle = '#e8002d';
+      ctx.fillRect(0, 0, W, 6);
+    } else if (style === 'cinematic') {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, W, H);
+      // letterbox bars
+      const bar = Math.round(H * 0.07);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, bar);
+      ctx.fillRect(0, H - bar, W, bar);
+    } else if (style === 'retro') {
+      ctx.fillStyle = '#120800';
+      ctx.fillRect(0, 0, W, H);
+      // vignette
+      const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.8);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.75)');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // ── Particles (neon only) ──
+    if (style === 'neon') {
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(232,255,71,${p.o})`;
+        ctx.fill();
+      });
+    }
+
+    // ── Determine window of lines to show ──
+    const curIdx = getCurrentLineIdx(t);
+
+    // Show at most 2 lines above (done) + current + 3 lines below (upcoming)
+    const showLines = [];
+    const from = Math.max(0, curIdx - 2);
+    const to   = Math.min(allLines.length - 1, curIdx + 3);
+    for (let i = from; i <= to; i++) {
+      showLines.push({ line: allLines[i], idx: i });
+    }
+
+    // ── Layout ──
+    const lineH   = Math.round(H * (isVertical ? 0.13 : 0.155));
+    // Before lyrics start, anchor current line (line 0) slightly above centre
+    // so upcoming lines below don't crowd the frame
+    const isPreLyrics = t < lineRanges[0].start;
+    const centerY = isPreLyrics ? Math.round(H * 0.42) : H / 2;
+
+    // ── Draw progress bar ──
+    const pbH = 3, pbY = H - (style === 'cinematic' ? Math.round(H*0.07)+pbH+6 : pbH+6);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(0, pbY, W, pbH);
+    ctx.fillStyle = S.highlight;
+    ctx.fillRect(0, pbY, W * (t / totalDuration), pbH);
+
+    // ── Draw time ──
+    const timeStr = fmtTime(t);
+    ctx.font = `400 ${Math.round(H*0.022)}px 'Outfit'`;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.textAlign = 'right';
+    ctx.fillText(timeStr, W - 24, H - (style==='cinematic'?Math.round(H*0.07):0) - 18);
+
+    // ── Draw lines ──
+    showLines.forEach(({line, idx}) => {
+      const lr        = lineRanges[idx];
+      const lineStart = lr.start;
+      const lineEnd   = lr.end;
+
+      // A line is "done" only once curIdx has moved past it
+      const isDone     = idx < curIdx;
+      const isCurrent  = idx === curIdx;
+      // A line is "upcoming" if cursor hasn't reached its first word yet
+      const isUpcoming = !isDone && !isCurrent;
+
+      // Vertical position: offset from centre by distance-in-lines from current
+      const relIdx = idx - curIdx;
+      const yPos   = centerY + relIdx * lineH;
+
+      // Skip fully off-screen
+      if (yPos < -lineH * 2 || yPos > H + lineH) return;
+
+      // Opacity / scale by state
+      let lineOpacity = 1;
+      let lineScale   = 1;
+      if (isDone) {
+        lineOpacity = 0.30;
+        lineScale   = 0.90;
+      }
+      if (isUpcoming) {
+        const dist = lineStart - t;
+        // Fade in as line approaches; distant lines are very dim
+        lineOpacity = Math.min(1, Math.max(0.12, 1 - dist * 0.25));
+        lineScale   = Math.min(1, Math.max(0.86, 1 - dist * 0.04));
+      }
+      if (isCurrent) { lineOpacity = 1; lineScale = 1; }
+
+      ctx.save();
+      ctx.globalAlpha = lineOpacity;
+      ctx.translate(W / 2, yPos);
+      ctx.scale(lineScale, lineScale);
+
+      drawLine(ctx, line, t, isCurrent, isDone, isUpcoming, W, H, S, style, BASE_FONT_SIZE, DONE_FONT_SIZE);
+
+      ctx.restore();
+    });
+
+    // ── Scanlines (retro) ──
+    if (style === 'retro' && scanlineCanvas) {
+      ctx.drawImage(scanlineCanvas, 0, 0);
+      // CRT flicker
+      if (Math.random() < 0.02) {
+        ctx.fillStyle = `rgba(255,220,100,${Math.random()*0.03})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    // ── Cinematic grain ──
+    if (style === 'cinematic' && Math.random() < 0.5) {
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const noise = (Math.random()-0.5)*18;
+        d[i] = Math.min(255, Math.max(0, d[i]+noise));
+        d[i+1] = Math.min(255, Math.max(0, d[i+1]+noise));
+        d[i+2] = Math.min(255, Math.max(0, d[i+2]+noise));
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+  };
+}
+
+// ─── Draw a single line with exact per-word karaoke highlighting ─────────────
+function drawLine(ctx, line, t, isCurrent, isDone, isUpcoming, W, H, S, style, BASE_FS, DONE_FS) {
+  const words = line.words;
+  const fs = isDone ? DONE_FS : BASE_FS;
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  const GAP = Math.round(fs * 0.32);
+
+  // Measure all words at base size
+  ctx.font = makeFont(style, fs, false);
+  const wordWidths = words.map(w => ctx.measureText(w.text).width);
+  const totalWidth = wordWidths.reduce((a, b) => a + b, 0) + GAP * (words.length - 1);
+
+  // Scale down if too wide
+  const maxW = W * 0.90;
+  const scale = totalWidth > maxW ? maxW / totalWidth : 1;
+
+  // Start x so the line is centred
+  let x = -(totalWidth * scale) / 2;
+  const y = 0;
+
+  words.forEach((w, wi) => {
+    const ww = wordWidths[wi] * scale;
+
+    // ── Exact word state ──────────────────────────────────────────────────────
+    // "active"  : audio cursor is inside this word's duration
+    // "said"    : word has finished (cursor is past its end)
+    // "upcoming": cursor hasn't reached this word yet
+    const wStart = w.timestamp;
+    const wEnd   = w.timestamp + w.duration;
+    const isActive   = t >= wStart && t < wEnd;
+    const isSaid     = t >= wEnd;
+    // progress 0→1 while the word is being spoken
+    const prog       = isActive ? (t - wStart) / w.duration : 0;
+
+    const drawSize = fs * scale * (isActive ? 1 + prog * 0.07 : 1);
+    ctx.font = makeFont(style, drawSize, isActive);
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    if (isCurrent) {
+      if (isActive) {
+        // ── Highlighted / being spoken ──
+        if (S.glow) {
+          ctx.shadowColor = S.glow;
+          ctx.shadowBlur  = 18 + prog * 22;
+        }
+        ctx.fillStyle = S.highlight;
+        // Extra bloom pass for neon
+        if (style === 'neon') {
+          ctx.globalAlpha = 0.35;
+          ctx.fillText(w.text, x, y);
+          ctx.globalAlpha = 1;
+        }
+        ctx.fillText(w.text, x, y);
+        ctx.shadowBlur = 0;
+
+        // Live underline that fills left→right as word is spoken
+        if (style !== 'minimal') {
+          ctx.fillStyle = S.highlight;
+          ctx.globalAlpha = 0.75;
+          const barH = Math.max(2, drawSize * 0.07);
+          ctx.fillRect(x, y + drawSize * 0.62, ww * prog, barH);
+          ctx.globalAlpha = 1;
+        }
+
+      } else if (isSaid) {
+        // ── Already spoken — dimmed ──
+        ctx.font = makeFont(style, fs * scale, false);
+        ctx.fillStyle = style === 'minimal'
+          ? 'rgba(17,17,34,0.5)'
+          : 'rgba(255,255,255,0.45)';
+        ctx.fillText(w.text, x, y);
+
+      } else {
+        // ── Upcoming word in current line ──
+        ctx.font = makeFont(style, fs * scale, false);
+        ctx.fillStyle = S.active;
+        ctx.fillText(w.text, x, y);
+      }
+
+    } else {
+      // ── Non-current line (done or upcoming) ──
+      ctx.font = makeFont(style, fs * scale, false);
+      ctx.fillStyle = S.inactive;
+      ctx.fillText(w.text, x, y);
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    x += ww + GAP * scale;
+  });
+}
+
+function makeFont(style, size, bold) {
+  const sz = Math.round(size);
+  if (style === 'cinematic') return `900 ${sz}px 'Bebas Neue', sans-serif`;
+  if (bold) return `700 ${sz}px 'Outfit', sans-serif`;
+  return `400 ${sz}px 'Outfit', sans-serif`;
+}
+
+function fmtTime(s) {
+  const m  = Math.floor(s / 60);
+  const ss = Math.floor(s % 60);
+  return `${m}:${ss.toString().padStart(2, '0')}`;
+}
+</script>
+</body>
+</html>
